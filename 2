@@ -1,0 +1,103 @@
+const config = {
+    type: Phaser.AUTO,
+    width: 800,
+    height: 600,
+    physics: {
+        default: 'arcade',
+        arcade: {
+            debug: false,
+            gravity: { y: 0 }
+        }
+    },
+    scene: {
+        preload: preload,
+        create: create,
+        update: update
+    }
+};
+
+const game = new Phaser.Game(config);
+let car;
+let cursors;
+let speedText;
+let speed = 0;
+const maxSpeed = 300;
+const acceleration = 600;
+const turnSpeed = 300;
+
+function preload() {
+    // Assets loaded here
+}
+
+function create() {
+    // Create car sprite (red rectangle)
+    car = this.add.rectangle(400, 300, 30, 50, 0xff0000);
+    car.angle = 0;
+    this.physics.add.existing(car);
+    car.body.setMaxVelocity(maxSpeed, maxSpeed);
+    car.body.setDrag(0.98);
+
+    // Input controls
+    cursors = this.input.keyboard.createCursorKeys();
+    const wasd = this.input.keyboard.addKeys('W,A,S,D');
+    this.cursors = { ...cursors, ...wasd };
+
+    // Speed display
+    speedText = this.add.text(16, 16, 'Speed: 0 px/s', {
+        fontSize: '16px',
+        fill: '#fff'
+    });
+
+    // Draw track boundary (green rectangle)
+    this.add.rectangle(400, 300, 800, 600).setStrokeStyle(4, 0x00ff00).setFilled(false);
+}
+
+function update() {
+    let accel = 0;
+    let turn = 0;
+
+    // Forward/Backward
+    if (this.cursors.UP.isDown || this.cursors.W.isDown) {
+        accel = 600;
+    } else if (this.cursors.DOWN.isDown || this.cursors.S.isDown) {
+        accel = -300;
+    }
+
+    // Left/Right
+    if (this.cursors.LEFT.isDown || this.cursors.A.isDown) {
+        turn = -300;
+    } else if (this.cursors.RIGHT.isDown || this.cursors.D.isDown) {
+        turn = 300;
+    }
+
+    // Calculate current speed
+    speed = Math.hypot(car.body.velocity.x, car.body.velocity.y);
+
+    // Apply acceleration
+    if (accel !== 0) {
+        const rad = Phaser.Math.DegToRad(car.angle);
+        car.body.setAcceleration(
+            Math.cos(rad) * accel,
+            Math.sin(rad) * accel
+        );
+    } else {
+        car.body.setAcceleration(0, 0);
+    }
+
+    // Steering
+    if (speed > 50 && turn !== 0) {
+        car.angle += (turn / speed) * 0.1;
+    }
+
+    // Boundary collision
+    if (car.x < 30 || car.x > 770 || car.y < 30 || car.y > 570) {
+        car.body.setVelocity(car.body.velocity.x * 0.5, car.body.velocity.y * 0.5);
+        if (car.x < 30) car.x = 30;
+        if (car.x > 770) car.x = 770;
+        if (car.y < 30) car.y = 30;
+        if (car.y > 570) car.y = 570;
+    }
+
+    // Update speed display
+    speedText.setText(`Speed: ${Math.round(speed)} px/s`);
+}
